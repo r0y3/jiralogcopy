@@ -1,4 +1,3 @@
-import dateutil.parser
 from settings import CREDENTIALS, PROJECTS, UPDATED_SINCE_HOURS
 from jiracopy import JiraLogCopier
 

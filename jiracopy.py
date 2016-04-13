@@ -3,7 +3,6 @@ import datetime
 from dateutil.tz import tzutc
 from jira import JIRA
 from jira.exceptions import JIRAError
-import pdb;
 
 class JiraLogCopier(object):
     source = None
@@ -25,8 +24,16 @@ class JiraLogCopier(object):
             return None
         return jira
 
-    # Get worklogs from remote.
-    def copy_worklogs(self):
+    def createFromJQL(self, frm):
+        # Only get logs from yesterday until today.
+        jql = 'project = \'%s\' and updated < endOfDay() AND updated > -%sh ORDER BY updated DESC' % (frm, self.updated_since)
+        # Strip Session keyword.
+        return jql.replace('Session', '\'Session\'')
+
+    def get_source_issues(self):
+        """
+        Retrieve issues from source JIRA
+        """
         self.source = self.authenticate(
                 self.credentials['from']['username'],
                 self.credentials['from']['password'],
@@ -36,32 +43,32 @@ class JiraLogCopier(object):
             for frm, to in self.projects.iteritems():
                 print 'Getting worklogs for %s' % (frm,)
 
-                # Only get logs from yesterday until today.
-                jql = 'project = \'%s\' and updated < endOfDay() AND updated > -%sh ORDER BY updated DESC' % (frm, self.updated_since)
-                # Handle Session keyword.
-                jql = jql.replace('Session', '\'Session\'')
+                jql = self.createFromJQL(frm)
 
                 print(jql)
 
-                for issue in self.source.search_issues(jql):
-                    for logs in [filter(lambda x: x.author.key == self.credentials['from']['username'], worklogs) for worklogs in [self.source.worklogs(issue)]]:
-                        if len(logs) > 0:
-                            self.manage_logs(frm, to, issue, logs)
+                return self.source.search_issues(jql)
         else:
             print 'Unable to connect to %s.' % (self.credentials['from']['server'],)
 
-    # Manage worklogs.
+        return None
+
+    def createToJQL(self, issue, to):
+        summary_q = '[%s]' % (issue.key,)
+        for o, r in [('?', '\\\\?'), ('[', '\\\\['), (']', '\\\\]')]:
+            summary_q = summary_q.replace(o, r)
+
+        return 'project = \'%s\' and summary ~ \'%s\'' % (to.split(' > ')[0], summary_q)
+
     def manage_logs(self, frm, to, issue, logs):
+        """
+        Manage worklogs.
+        """
         self.destination = self.authenticate(self.credentials['to']['username'], self.credentials['to']['password'], self.credentials['to']['server'])
 
         if self.destination is not None:
             try:
-                #summary_q = '[%s] %s' % (issue.key, issue.fields.summary)
-                summary_q = '[%s]' % (issue.key,)
-                for o, r in [('?', '\\\\?'), ('[', '\\\\['), (']', '\\\\]')]:
-                    summary_q = summary_q.replace(o, r)
-
-                jql = 'project = \'%s\' and summary ~ \'%s\'' % (to.split(' > ')[0], summary_q)
+                jql = self.createToJQL(issue, to)
 
                 print(jql)
 
@@ -80,8 +87,10 @@ class JiraLogCopier(object):
         else:
             print 'Unable to connect to %s.' % (self.credentials['to']['server'],)
 
-    # Insert worklogs.
     def insert_logs(self, project_key, local_issue, remote_issue, dst_worklogs, src_worklogs, is_new=False):
+        """
+        Insert worklogs to destination JIRA
+        """
         if is_new:
             local_issue = self.create_issue(project_key, remote_issue)
             if local_issue is not None:
@@ -118,8 +127,10 @@ class JiraLogCopier(object):
                 else:
                     print('Existing worklog found.')
 
-    # Create a new issue.
     def create_issue(self, project_key, remote_issue):
+        """
+        Create an issue if not found.
+        """
         try:
             project = self.destination.project(project_key.split(' > ')[0])
             issue_dict = {

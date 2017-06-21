@@ -20,7 +20,7 @@ class JiraLogCopier(object):
         try:
             print('Logging in to %s' % (server))
             jira = JIRA(basic_auth=(username, password), server=server)
-        except JIRAError, ex:
+        except JIRAError:
             return None
         return jira
 
@@ -40,16 +40,16 @@ class JiraLogCopier(object):
                 self.credentials['from']['server']
                 )
         if self.source is not None:
-            for frm, to in self.projects.iteritems():
-                print 'Getting worklogs for %s' % (frm,)
+            for frm, to in self.projects.items():
+                print('Getting worklogs for %s' % (frm,))
 
                 jql = self.createFromJQL(frm)
 
                 print(jql)
 
-                return self.source.search_issues(jql)
+                return frm, to, self.source.search_issues(jql)
         else:
-            print 'Unable to connect to %s.' % (self.credentials['from']['server'],)
+            print('Unable to connect to %s.' % (self.credentials['from']['server'],))
 
         return None
 
@@ -82,10 +82,10 @@ class JiraLogCopier(object):
                 if not with_local:
                     print("No local issue.")
                     self.insert_logs(to, None, issue, [], logs, True)
-            except Exception, ex:
+            except Exception as ex:
                 print(ex)
         else:
-            print 'Unable to connect to %s.' % (self.credentials['to']['server'],)
+            print('Unable to connect to %s.' % (self.credentials['to']['server'],))
 
     def insert_logs(self, project_key, local_issue, remote_issue, dst_worklogs, src_worklogs, is_new=False):
         """
@@ -103,7 +103,7 @@ class JiraLogCopier(object):
                                 comment=log.comment
                                 )
                         print ('Worklog successfully added.')
-                    except Exception, ex:
+                    except Exception as ex:
                         print(ex)
         else:
             for log in filter(
@@ -142,7 +142,7 @@ class JiraLogCopier(object):
                     }
             print('Creating new issue.')
             return self.destination.create_issue(fields=issue_dict)
-        except Exception, ex:
+        except Exception as ex:
             # FIXME: More specific exception.
             print(ex)
             return None

@@ -1,4 +1,4 @@
-from Queue import Queue
+from queue import Queue
 from threading import Thread
 
 class JiraWorker(Thread):
@@ -9,8 +9,9 @@ class JiraWorker(Thread):
 
     def run(self):
         while True:
-            issue = self.queue.get()
+            frm, to, issue = self.queue.get()
             for logs in [filter(lambda x: x.author.key == self.logger.credentials['from']['username'], worklogs) for worklogs in [self.logger.source.worklogs(issue)]]:
-                if len(logs) > 0:
-                    self.logger.manage_logs(frm, to, issue, logs)
+                logs_list = list(logs)
+                if len(logs_list) > 0:
+                    self.logger.manage_logs(frm, to, issue, logs_list)
             self.queue.task_done()

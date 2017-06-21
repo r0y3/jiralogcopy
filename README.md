@@ -2,6 +2,8 @@
 
 ## Get Started
 
+**__Pre-requisites:__** Python 3
+
 1. Clone this repo
 
     ```

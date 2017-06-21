@@ -12,6 +12,6 @@ class JiraWorker(Thread):
             frm, to, issue = self.queue.get()
             for logs in [filter(lambda x: x.author.key == self.logger.credentials['from']['username'], worklogs) for worklogs in [self.logger.source.worklogs(issue)]]:
                 logs_list = list(logs)
-                if len(logs_list) > 0:
+                if logs_list:
                     self.logger.manage_logs(frm, to, issue, logs_list)
             self.queue.task_done()

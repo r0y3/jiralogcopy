@@ -39,7 +39,7 @@ class JiraLogCopier(object):
                 self.credentials['from']['password'],
                 self.credentials['from']['server']
                 )
-        if self.source is not None:
+        if self.source:
             for frm, to in self.projects.items():
                 print('Getting worklogs for %s' % (frm,))
 
@@ -66,7 +66,7 @@ class JiraLogCopier(object):
         """
         self.destination = self.authenticate(self.credentials['to']['username'], self.credentials['to']['password'], self.credentials['to']['server'])
 
-        if self.destination is not None:
+        if self.destination:
             try:
                 jql = self.createToJQL(issue, to)
 
@@ -93,7 +93,7 @@ class JiraLogCopier(object):
         """
         if is_new:
             local_issue = self.create_issue(project_key, remote_issue)
-            if local_issue is not None:
+            if local_issue:
                 for log in src_worklogs:
                     try:
                         local_log = self.destination.add_worklog(
@@ -106,24 +106,24 @@ class JiraLogCopier(object):
                     except Exception as ex:
                         print(ex)
         else:
-            for log in filter(
-                    lambda x: dateutil.parser.parse(x.started) >= (datetime.datetime.now(tzutc()) - datetime.timedelta(hours=self.updated_since)),
-                    src_worklogs
-                    ):
+            for log in list(filter(
+                lambda x: dateutil.parser.parse(x.started) >= (datetime.datetime.now(tzutc()) - datetime.timedelta(hours=self.updated_since)),
+                src_worklogs
+            )):
                 found = filter(lambda x:
-                        log.comment == x.comment
-                        and log.timeSpent == x.timeSpent
-                        and dateutil.parser.parse(log.started) == dateutil.parser.parse(x.started),
-                        dst_worklogs)
-                if len(found) == 0:
+                               log.comment == x.comment
+                               and log.timeSpent == x.timeSpent
+                               and dateutil.parser.parse(log.started) == dateutil.parser.parse(x.started),
+                               dst_worklogs)
+                if list(found):
                     print(log.comment)
                     local_log = self.destination.add_worklog(
-                            issue=local_issue,
-                            timeSpent=log.timeSpent,
-                            started=dateutil.parser.parse(log.started),
-                            comment=log.comment
-                            )
-                    print ('Worklog successfully added.')
+                        issue=local_issue,
+                        timeSpent=log.timeSpent,
+                        started=dateutil.parser.parse(log.started),
+                        comment=log.comment
+                    )
+                    print('Worklog successfully added.')
                 else:
                     print('Existing worklog found.')
 
